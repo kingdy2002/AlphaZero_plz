@@ -1,9 +1,8 @@
 import torch.nn as nn
-import numpy as np
 import torch
-import torch.functional as F
+import torch.nn.functional as F
 import NeuralNet
-
+import os
 def soft_update(target, source, tau):
     for target_param, param in zip(target.parameters(), source.parameters()):
         target_param.data.copy_(target_param.data * (1.0 - tau) + param.data * tau)
@@ -40,11 +39,9 @@ class ResidualBlock(nn.Module):
             self.shortcut = nn.Sequential()
 
     def forward(self, x):
-        res = x
         x = self.cnn(x)
-        x += self.shortcut(res)
-        x = nn.ReLU(True)(x)
-        return x
+        res = self.shortcut(x)
+        return x + res
 
 
 class Net(nn.Module):
@@ -53,7 +50,7 @@ class Net(nn.Module):
 
         self.boardsize = boardsize;
         self.block1 = nn.Sequential(
-            conv2d(3,64,3,1,1),
+            conv2d(4,64,3,1,1),
             conv2d(64, 128, 3, 1,1)
         )
         self.block2 = nn.Sequential(
@@ -74,57 +71,70 @@ class Net(nn.Module):
             ResidualBlock(128, 128),
             ResidualBlock(128, 128)
         )
-        self.valueblock = nn.Sequential(
-            conv2d(128, 4, 1, 1, 0),
+        self.valueblock_1 = nn.Sequential(
+            conv2d(128, 4, 1, 1, 0)
+        )
+        self.valueblock_2 = nn.Sequential(
             nn.Linear(4*self.boardsize*self.boardsize, self.boardsize*self.boardsize),
             nn.ReLU(),
             nn.Linear(self.boardsize * self.boardsize, 1),
             nn.Tanh()
         )
-        self.policyblock = nn.Sequential(
-            conv2d(128, 4, 1, 1, 0),
-            nn.Linear(4 * self.boardsize * self.boardsize, self.boardsize * self.boardsize),
-            nn.Softmax()
+        self.policyblock_1 = nn.Sequential(
+            conv2d(128, 4, 1, 1, 0)
         )
-
+        self.policyblock_2 = nn.Sequential(
+            nn.Linear(4 * self.boardsize * self.boardsize, self.boardsize * self.boardsize),
+            nn.Softmax(dim = 1)
+        )
     def forward(self, x):
         x = self.block1(x)
         x = self.block2(x)
-        return x
+        a_probs = self.policyblock_1(x)
+        a_probs = a_probs.view(-1,4 * self.boardsize * self.boardsize)
+        a_probs = self.policyblock_2(a_probs)
+
+        Q = self.valueblock_1(x)
+        Q = Q.view(-1,4 * self.boardsize * self.boardsize)
+        Q = self.valueblock_2(Q)
+        return a_probs, Q
 
 
 class Network(NeuralNet.NeuralNet) :
-    def __init__(self, game):
-        pass
+    def __init__(self, boardsize,model_file_path = None):
+        self.boardsize = boardsize
+        self.l2_const = 1e-4
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        self.net = Net(boardsize).to(self.device)
+        self.optimizer = torch.optim.Adam(self.net.parameters(),weight_decay=self.l2_const)
+
+        if model_file_path :
+            self.net.load_state_dict(torch.load(model_file_path))
+
 
     def train(self, state, mcts_probs, winner):
-        """
-        get self play data (state, mcts_probs, winner) and update
-        itself Network
-        """
-        pass
+        state_batch = state.to(self.device).detach()
+        mcts_probs_batch = mcts_probs.to(self.device).detach()
+        winner_batch = winner.to(self.device).detach()
+        self.optimizer.zero_grad()
+        act_prob, Q = self.net(state_batch)
+        log_act_prob = torch.log(act_prob)
+        value_loss = F.mse_loss(Q.view(-1), winner_batch)
+        policy_loss = -torch.mean(torch.sum(mcts_probs_batch * log_act_prob, 1))
+        loss = value_loss + policy_loss
+        loss.backward()
+        self.optimizer.step()
+        return loss.detach()
+
+
 
     def predict(self, state):
-        """
-        Input:
-            board.currentstate data format
+        state = state.to(self.device)
+        pi, Q = self.net(state)
+        return pi.data.numpy()[0], Q.data.numpy()[0]
 
-        Returns:
-            pi: a policy vector for the current board- a numpy array of length
-                game.getActionSize
-            v: a float in [-1,1] that gives the value of the current board
-        """
-        pass
+    def save_checkpoint(self, filename,folder = "D:/alphazero_modeldict"):
+        torch.save(self.net.state_dict(), f"{folder}/{filename}.pt")
 
-    def save_checkpoint(self, folder, filename):
-        """
-        Saves the current neural network (with its parameters) in
-        folder/filename
-        """
-        pass
-
-    def load_checkpoint(self, folder, filename):
-        """
-        Loads parameters of the neural network from folder/filename
-        """
-        pass
+    def load_checkpoint(self, filename,folder = "D:/alphazero_modeldict"):
+        self.net.load_state_dict(torch.load(f"{folder}/{filename}.pt"))

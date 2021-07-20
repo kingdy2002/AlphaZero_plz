@@ -1,7 +1,8 @@
 import numpy as np
 import Game
+import time
 #player는 -1, 1
-class borad(Game.Board) :
+class board(Game.Board) :
     def __init__(self, width, height) :
         self.width = width
         self.height = height
@@ -10,7 +11,7 @@ class borad(Game.Board) :
         self.players = [1,-1]
         self.valid_move = set(range(0,width*height))
 
-    def init_borad(self):
+    def init_board(self):
         self.state = {}
         self.stone_n = 0
         self.last_move = -1
@@ -117,22 +118,41 @@ class borad(Game.Board) :
         return 0
 
 
-    def has_win(self,len):
+    def has_win(self,length):
 
-        for i in self.state.keys() :
-            if self.check_down_dia(i,len) != 0 :
-                return self.check_down_dia(i,len)
-            if self.check_up_dia(i,len) != 0 :
-                return self.check_down_dia(i,len)
-            if self.check_down_str(i,len) != 0 :
-                return self.check_down_dia(i,len)
-            if self.check_right_str(i,len) != 0 :
-                return self.check_down_dia(i,len)
+        width = self.width
+        height = self.height
+        states = self.state
+        n = length
 
-        return 0
+        moved = list(set(range(width * height)) - self.valid_move)
+        if len(moved) < n * 2-1:
+            return False, 0
+        for m in moved:
+            h = m // width
+            w = m % width
+            player = states[m]
+
+            if (w in range(width - n + 1) and
+                    len(set(states.get(i, 0) for i in range(m, m + n))) == 1):
+                return True, player
+
+            if (h in range(height - n + 1) and
+                    len(set(states.get(i, 0) for i in range(m, m + n * width, width))) == 1):
+                return True, player
+
+            if (w in range(width - n + 1) and h in range(height - n + 1) and
+                    len(set(states.get(i, 0) for i in range(m, m + n * (width + 1), width + 1))) == 1):
+                return True, player
+
+            if (w in range(n - 1, width) and h in range(height - n + 1) and
+                    len(set(states.get(i, 0) for i in range(m, m + n * (width - 1), width - 1))) == 1):
+                return True, player
+
+        return False, 0
 
     def check_end(self):
-        winner = self.has_win(5)
+        win, winner = self.has_win(5)
         if winner :
             if winner == self.current_player :
                 return (True, 1)
@@ -151,8 +171,8 @@ class borad(Game.Board) :
         """
 
         square_state = np.zeros((4, self.width, self.height))
-        if self.states:
-            moves, players = np.array(list(zip(*self.states.items())))
+        if self.state:
+            moves, players = np.array(list(zip(*self.state.items())))
             move_curr = moves[players == self.current_player]
             move_oppo = moves[players != self.current_player]
             square_state[0][move_curr // self.width,
@@ -162,9 +182,9 @@ class borad(Game.Board) :
             # indicate the last move location
             square_state[2][self.last_move // self.width,
                             self.last_move % self.height] = 1.0
-        if len(self.states) % 2 == 0:
+        if len(self.state) % 2 == 0:
             square_state[3][:, :] = 1.0  # indicate the colour to play
-        return square_state[:, ::-1, :]
+        return square_state
 
 
 class Game(Game.game):
@@ -187,7 +207,7 @@ class Game(Game.game):
             print("{0:4d}".format(i), end='')
             for j in range(width):
                 loc = i * width + j
-                p = board.states.get(loc, 0)
+                p = board.state.get(loc, 0)
                 if p == player1:
                     print('X'.center(8), end='')
                 elif p == player2:
@@ -196,18 +216,22 @@ class Game(Game.game):
                     print('_'.center(8), end='')
             print('\r\n\r\n')
 
-    def start_self_play(self,MCTs):
+    def start_self_play(self,MCTs,visiable):
         self.board.init_board()
-        MCTs.reset_mcts()
+        MCTs.reset_mcts(self.board)
         states, mcts_probs,current_players = [], [], []
         while True :
-            move, move_probs = MCTs.get_move()
+            move, move_probs = MCTs.get_move(self.board,True)
             states.append(self.board.current_state())
             mcts_probs.append(move_probs)
             current_players.append(self.board.current_player)
             self.board.place(move)
-            MCTs.update_and_restart_mcts_by_move(move)
+            MCTs.update_and_restart_mcts_by_move(move,self.board)
             end, win = self.board.check_end()
+
+            if visiable :
+                self.graphic(self.board, 1, -1)
+
             if end :
                 if win == 1 :
                     winner = self.board.current_player
@@ -219,6 +243,6 @@ class Game(Game.game):
                 if winner != 0:
                     winners_z[np.array(current_players) == winner] = 1.0
                     winners_z[np.array(current_players) != winner] = -1.0
-                MCTs.reset_mcts()
+                MCTs.reset_mcts(self.board)
                 return winner, zip(states, mcts_probs, winners_z)
 

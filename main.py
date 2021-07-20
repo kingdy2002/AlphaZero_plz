@@ -1,6 +1,9 @@
-# This is a sample Python script.
+import numpy as np
+from gomouk_gameutill import board
+from gomouk_gameutill import mcts
+from gomouk_gameutill import network
+from gomouk_gameutill import play
+from gomouk_gameutill import train
 
-# Press Shift+F10 to execute it or replace it with your code.
-# Press Double Shift to search everywhere for classes, files, tool windows, actions, and settings.
-
-
+train_gomouk = train.Trainner()
+train_gomouk.train(1000)
