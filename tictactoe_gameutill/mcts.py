@@ -62,7 +62,7 @@ class MCTs(object) :
 
             if end :
                 child_q = win
-                self.node.update_all(child_q)
+                self.node.update_all(-child_q)
                 break
             else :
                 with torch.no_grad():
@@ -71,18 +71,17 @@ class MCTs(object) :
                     a_probs, child_q = self.network(states)
                 if self.node.is_leaf():
                     self.node.add_chiled(a_probs,board.valid_move)
-                    self.node.update_all(child_q.item())
+                    self.node.update_all(-child_q.item())
                     break
 
     def get_move_probs(self,board):
         for i in range(self.n_playout):
             board_copy = copy.deepcopy(board)
             self.playout(board_copy)
-        act_visits = [(act, node.visited_n)
+        act_visits = [(act, node.visited_n, node.Q,node.U)
                       for act, node in self.root.children.items()]
-        acts, visits = zip(*act_visits)
+        acts, visits, Q, U = zip(*act_visits)
         act_probs = visits/np.sum(visits)
-
         return acts, act_probs
 
     def update_and_restart_mcts_by_move(self,move,board):
@@ -96,7 +95,6 @@ class MCTs(object) :
 
 
     def reset_mcts(self,board):
-        board.init_board()
         self.root = MCTsNode(None, 1, self.c_ratio)
         with torch.no_grad():
             states = board.current_state()
@@ -111,10 +109,11 @@ class MCTs(object) :
         if self_play :
             move = np.random.choice(
                 acts,
-                p=0.75 * probs + 0.25 * np.random.dirichlet(0.03 * np.ones(len(probs)))
+                p=0.75 * probs + 0.25 * np.random.dirichlet(0.3 * np.ones(len(probs)))
             )
+            self.reset_mcts(board)
         else :
-            move = np.random.choice(acts, p=probs)
+            move = np.argmax(move_probs)
             self.reset_mcts(board)
 
         return move, move_probs

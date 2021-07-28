@@ -40,57 +40,6 @@ class Trainner(object):
             update = True
         return loss, update
 
-    def evaluate(self):
-        print("start evaluate")
-        player = np.array([1, -1])
-        ai = np.random.choice(player)
-        self.randomplayer = play.randomplayer(self.board)
-        self.board.init_borad()
-        self.mct.reset_mcts(self.board)
-        ai_win_count = 0
-
-        for i in range(10) :
-            self.board.init_borad()
-            self.mct.reset_mcts(self.board)
-
-
-
-            if ai == 1 :
-                while True :
-                    move, move_probs = self.mct.get_move(self.board,False)
-                    self.board.place(move)
-                    self.mct.update_and_restart_mcts_by_move(move, self.board)
-                    end, win = self.board.check_end()
-                    if end :
-                        break
-                    move = self.randomplayer.random_action()
-                    self.board.place(move)
-                    self.mct.update_and_restart_mcts_by_move(move, self.board)
-                    end, win = self.board.check_end()
-                    if end :
-                        break
-
-            if ai == -1:
-                while True:
-                    move = self.randomplayer.random_action()
-                    self.board.place(move)
-                    self.mct.update_and_restart_mcts_by_move(move, self.board)
-                    end, win = self.board.check_end()
-                    if end:
-                        break
-                    move, move_probs = self.mct.get_move(self.board, True)
-                    self.board.place(move)
-                    self.mct.update_and_restart_mcts_by_move(move, self.board)
-                    end, win = self.board.check_end()
-                    if end:
-                        break
-            
-            if win != 0:
-                if ai == self.board.current_player * win:
-                    ai_win_count += 1
-
-
-        return ai_win_count/10*100
 
     def train(self,episode_n):
         best_win_ratio = 0

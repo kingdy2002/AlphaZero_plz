@@ -41,82 +41,6 @@ class board(Game.Board) :
             valid[i] = 1
         return valid
 
-    def check_down_dia(self,move,len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h += 1
-        w += 1
-        while 0 <= h <= self.height and  0<= w < self.height :
-
-            if self.state.get(self.locaton_to_move([h,w]),player) :
-                now_len += 1
-                h += 1
-                w += 1
-
-            if now_len == len :
-                return player
-
-        return 0
-
-    def check_up_dia(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h -= 1
-        w += 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                h -= 1
-                w += 1
-
-            if now_len == len:
-                return player
-
-        return 0
-
-    def check_down_str(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h -= 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                h -= 1
-
-            if now_len == len:
-                return player
-
-        return 0
-
-    def check_right_str(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        w += 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                w += 1
-
-            if now_len == len:
-                return player
-
-        return 0
-
 
     def has_win(self,length):
 
@@ -246,3 +170,14 @@ class Game(Game.game):
                 MCTs.reset_mcts(self.board)
                 return winner, zip(states, mcts_probs, winners_z)
 
+    def ai_play(self,MCTs):
+        self.board.init_board()
+        MCTs.reset_mcts(self.board)
+        while True :
+            move, move_probs = MCTs.get_move(self.board,False)
+            self.board.place(move)
+            MCTs.update_and_restart_mcts_by_move(move,self.board)
+            end, win = self.board.check_end()
+            self.graphic(self.board, 1, -1)
+            if end :
+                return

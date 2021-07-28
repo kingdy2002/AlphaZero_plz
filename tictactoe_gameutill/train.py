@@ -13,7 +13,7 @@ class Trainner(object):
         self.game = board.Game(self.board)
         self.network = network.Network(3)
         self.mct = mcts.MCTs(self.network.net, 5, 50)
-        self.buffer_size = 2000
+        self.buffer_size = 1000
         self.batch_size = 64
         self.data_buffer = deque(maxlen=self.buffer_size)
 
@@ -24,7 +24,7 @@ class Trainner(object):
     def update(self):
         loss = 0
         update = False
-        if len(self.data_buffer) > 500 :
+        if len(self.data_buffer) > 200 :
             mini_batch = random.sample(self.data_buffer, self.batch_size)
             state_batch = [data[0] for data in mini_batch]
             mcts_probs_batch = [data[1] for data in mini_batch]
@@ -100,7 +100,7 @@ class Trainner(object):
             loss, update = self.update()
             if i % 10 == 0 :
                 filename = str(i)+"_th_dict"
-                self.network.save_checkpoint(filename,)
+                self.network.save_checkpoint(filename)
                 #win_ratio = self.evaluate()
                 #win_ratio_list.append(win_ratio)
                 #print("episode ",i," : win ratio is ",win_ratio)
@@ -112,4 +112,4 @@ class Trainner(object):
 
     def ai_play(self, filename):
         self.network.load_checkpoint(filename)
-        winner, play_data = self.game.start_self_play(self.mct, True)
+        self.game.ai_play(self.mct)

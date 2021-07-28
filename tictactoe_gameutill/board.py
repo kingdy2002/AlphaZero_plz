@@ -169,3 +169,14 @@ class Game(Game.game):
                 MCTs.reset_mcts(self.board)
                 return winner, zip(states, mcts_probs, winners_z)
 
+    def ai_play(self,MCTs):
+        self.board.init_board()
+        MCTs.reset_mcts(self.board)
+        while True :
+            move, move_probs = MCTs.get_move(self.board,False)
+            self.board.place(move)
+            MCTs.update_and_restart_mcts_by_move(move,self.board)
+            end, win = self.board.check_end()
+            self.graphic(self.board, 1, -1)
+            if end :
+                return
