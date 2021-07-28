@@ -3,20 +3,18 @@ import Game
 import time
 #player는 -1, 1
 class board(Game.Board) :
-    def __init__(self, width, height) :
-        self.width = width
-        self.height = height
+    def __init__(self) :
         self.stone_n = 0
         self.state = {}
         self.players = [1,-1]
-        self.valid_move = set(range(0,width*height))
+        self.valid_move = set(range(0,9))
 
     def init_board(self):
         self.state = {}
         self.stone_n = 0
         self.last_move = -1
         self.current_player = 1
-        self.valid_move = set(range(0, self.width * self.height))
+        self.valid_move = set(range(0, 9))
 
     def place(self,move):
         self.state[move] = self.current_player
@@ -26,107 +24,32 @@ class board(Game.Board) :
         self.current_player = -self.current_player
 
     def move_to_location(self, move):
-        h = move // self.width
-        w = move % self.width
+        h = move // 3
+        w = move % 3
         return [h, w]
 
     def locaton_to_move(self, location):
         h = location[0]
         w = location[1]
-        return h* self.width + w
+        return h* 3 + w
 
     def valid_move(self):
-        valid = np.zeros(self.width * self.height)
+        valid = np.zeros(9)
         for i in self.valid_move:
             valid[i] = 1
         return valid
 
-    def check_down_dia(self,move,len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h += 1
-        w += 1
-        while 0 <= h <= self.height and  0<= w < self.height :
-
-            if self.state.get(self.locaton_to_move([h,w]),player) :
-                now_len += 1
-                h += 1
-                w += 1
-
-            if now_len == len :
-                return player
-
-        return 0
-
-    def check_up_dia(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h -= 1
-        w += 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                h -= 1
-                w += 1
-
-            if now_len == len:
-                return player
-
-        return 0
-
-    def check_down_str(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        h -= 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                h -= 1
-
-            if now_len == len:
-                return player
-
-        return 0
-
-    def check_right_str(self, move, len):
-        location = self.move_to_location(move)
-        h = location[0]
-        w = location[1]
-        player = self.state[move]
-        now_len = 1
-        w += 1
-        while 0 <= h <= self.height and 0 <= w < self.height:
-
-            if self.state.get(self.locaton_to_move([h, w]), player):
-                now_len += 1
-                w += 1
-
-            if now_len == len:
-                return player
-
-        return 0
 
 
-    def has_win(self,length):
+    def has_win(self):
 
-        width = self.width
-        height = self.height
+        width = 3
+        height = 3
         states = self.state
-        n = length
+        n = 3
 
         moved = list(set(range(width * height)) - self.valid_move)
-        if len(moved) < n * 2-1:
+        if len(moved) < 4:
             return False, 0
         for m in moved:
             h = m // width
@@ -152,7 +75,7 @@ class board(Game.Board) :
         return False, 0
 
     def check_end(self):
-        win, winner = self.has_win(5)
+        win, winner = self.has_win()
         if winner :
             if winner == self.current_player :
                 return (True, 1)
@@ -160,7 +83,7 @@ class board(Game.Board) :
             else :
                 return (True, -1)
 
-        if self.stone_n > self.width * self.height - 5 :
+        if self.stone_n == 9  :
             return (True , 0)
         else :
             return (False, 0)
@@ -170,18 +93,18 @@ class board(Game.Board) :
         state shape: 4*width*height
         """
 
-        square_state = np.zeros((4, self.width, self.height))
+        square_state = np.zeros((4, 3, 3))
         if self.state:
             moves, players = np.array(list(zip(*self.state.items())))
             move_curr = moves[players == self.current_player]
             move_oppo = moves[players != self.current_player]
-            square_state[0][move_curr // self.width,
-                            move_curr % self.height] = 1.0
-            square_state[1][move_oppo // self.width,
-                            move_oppo % self.height] = 1.0
+            square_state[0][move_curr // 3,
+                            move_curr % 3] = 1.0
+            square_state[1][move_oppo // 3,
+                            move_oppo % 3] = 1.0
             # indicate the last move location
-            square_state[2][self.last_move // self.width,
-                            self.last_move % self.height] = 1.0
+            square_state[2][self.last_move // 3,
+                            self.last_move % 3] = 1.0
         if len(self.state) % 2 == 0:
             square_state[3][:, :] = 1.0  # indicate the colour to play
         return square_state
@@ -194,8 +117,8 @@ class Game(Game.game):
 
     def graphic(self, board, player1, player2):
         """Draw the board and show game info"""
-        width = board.width
-        height = board.height
+        width = 3
+        height = 3
 
         print("Player", player1, "with X".rjust(3))
         print("Player", player2, "with O".rjust(3))

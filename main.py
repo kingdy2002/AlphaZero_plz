@@ -1,9 +1,14 @@
 import numpy as np
-from gomouk_gameutill import board
-from gomouk_gameutill import mcts
-from gomouk_gameutill import network
-from gomouk_gameutill import play
-from gomouk_gameutill import train
+from tictactoe_gameutill import board
+from tictactoe_gameutill import mcts
+from tictactoe_gameutill import network
+from tictactoe_gameutill import play
+from tictactoe_gameutill import train
 
-train_gomouk = train.Trainner()
-train_gomouk.train(1000)
+train_tictactoe = train.Trainner()
+
+#filename = '500' + "_th_dict"
+#train_tictactoe.load_model(filename)
+train_tictactoe.train(1000)
+#train_tictactoe.ai_play(filename)
+#

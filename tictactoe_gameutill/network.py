@@ -50,38 +50,19 @@ class Net(nn.Module):
 
         self.boardsize = boardsize;
         self.block1 = nn.Sequential(
-            conv2d(4,64,3,1,1),
-            conv2d(64, 128, 3, 1,1)
-        )
-        self.block2 = nn.Sequential(
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128),
-            ResidualBlock(128, 128)
+            conv2d(4,32,3,1,1),
+            conv2d(32, 32, 3, 1,1),
+            conv2d(32, 32, 3, 1, 1)
         )
         self.valueblock_1 = nn.Sequential(
-            conv2d(128, 4, 1, 1, 0)
+            conv2d(32, 4, 1, 1, 0)
         )
         self.valueblock_2 = nn.Sequential(
-            nn.Linear(4*self.boardsize*self.boardsize, self.boardsize*self.boardsize),
-            nn.ReLU(),
-            nn.Linear(self.boardsize * self.boardsize, 1),
+            nn.Linear(4*self.boardsize*self.boardsize, 1),
             nn.Tanh()
         )
         self.policyblock_1 = nn.Sequential(
-            conv2d(128, 4, 1, 1, 0)
+            conv2d(32, 4, 1, 1, 0)
         )
         self.policyblock_2 = nn.Sequential(
             nn.Linear(4 * self.boardsize * self.boardsize, self.boardsize * self.boardsize),
@@ -89,7 +70,6 @@ class Net(nn.Module):
         )
     def forward(self, x):
         x = self.block1(x)
-        x = self.block2(x)
         a_probs = self.policyblock_1(x)
         a_probs = a_probs.view(-1,4 * self.boardsize * self.boardsize)
         a_probs = self.policyblock_2(a_probs)
@@ -133,8 +113,8 @@ class Network(NeuralNet.NeuralNet) :
         pi, Q = self.net(state)
         return pi.data.numpy()[0], Q.data.numpy()[0]
 
-    def save_checkpoint(self, filename,folder = "D:/alphazero_modeldict/gomouk"):
+    def save_checkpoint(self, filename,folder = "D:/alphazero_modeldict/ticktactoe"):
         torch.save(self.net.state_dict(), f"{folder}/{filename}.pt")
 
-    def load_checkpoint(self, filename,folder = "D:/alphazero_modeldict/gomouk"):
+    def load_checkpoint(self, filename,folder = "D:/alphazero_modeldict/ticktactoe"):
         self.net.load_state_dict(torch.load(f"{folder}/{filename}.pt"))

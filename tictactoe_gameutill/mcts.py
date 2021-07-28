@@ -106,7 +106,7 @@ class MCTs(object) :
 
     def get_move(self,board,self_play):
         acts, probs = self.get_move_probs(board)
-        move_probs = np.zeros(board.width * board.height)
+        move_probs = np.zeros(9)
         move_probs[list(acts)] = probs
         if self_play :
             move = np.random.choice(

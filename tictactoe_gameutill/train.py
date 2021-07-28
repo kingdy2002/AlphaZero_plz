@@ -1,21 +1,19 @@
 import numpy as np
-from gomouk_gameutill import board
-from gomouk_gameutill import mcts
-from gomouk_gameutill import network
-from gomouk_gameutill import play
+from tictactoe_gameutill import board
+from tictactoe_gameutill import mcts
+from tictactoe_gameutill import network
+from tictactoe_gameutill import play
 from collections import defaultdict, deque
 import random
 import torch
 
 class Trainner(object):
     def __init__(self) :
-        self.board_width = 8
-        self.board_height = 8
-        self.board = board.board(self.board_width,self.board_height)
+        self.board = board.board()
         self.game = board.Game(self.board)
-        self.network = network.Network(self.board_width)
-        self.mct = mcts.MCTs(self.network.net, 5, 800)
-        self.buffer_size = 1000
+        self.network = network.Network(3)
+        self.mct = mcts.MCTs(self.network.net, 5, 50)
+        self.buffer_size = 2000
         self.batch_size = 64
         self.data_buffer = deque(maxlen=self.buffer_size)
 
@@ -97,12 +95,12 @@ class Trainner(object):
         win_ratio_list = []
         for i in range(episode_n) :
             self.collect_data()
-            i = i+ 500
+            i = i
             print("episode ", i," finsih")
             loss, update = self.update()
             if i % 10 == 0 :
                 filename = str(i)+"_th_dict"
-                self.network.save_checkpoint(filename)
+                self.network.save_checkpoint(filename,)
                 #win_ratio = self.evaluate()
                 #win_ratio_list.append(win_ratio)
                 #print("episode ",i," : win ratio is ",win_ratio)
